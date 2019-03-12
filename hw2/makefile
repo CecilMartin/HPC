@@ -1,6 +1,6 @@
 
 CXX = g++ # define a variable CXX
-CXXFLAGS = -std=c++11 -O1 -g -march=native
+CXXFLAGS = -std=c++11 -O3  -march=native
 
 ifeq "$(CXX)" "icpc" # conditionals
 CXXFLAGS += -qopenmp # for Intel
