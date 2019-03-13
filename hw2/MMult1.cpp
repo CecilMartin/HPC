@@ -5,7 +5,7 @@
 #include <omp.h>
 #include "utils.h"
 
-#define BLOCK_SIZE 16
+#define BLOCK_SIZE 512
 
 // Note: matrices are stored in column major order; i.e. the array elements in
 // the (m x n) matrix C are stored in the sequence: {C_00, C_10, ..., C_m0,
@@ -25,28 +25,52 @@ void MMult0(long m, long n, long k, double *a, double *b, double *c) {
 }
 
 
+// void MMult1(long m, long n, long k, double *a, double *b, double *c) {
+//   //  OpenMP
+//   long j, p, i;
+//   #pragma omp for
+//   for (j = 0; j < n; j++){
+//     for (p = 0; p < k; p++){
+//       for (i = 0; i < m; i++){
+//         double A_ip = a[i+p*m];
+//         double B_pj = b[p+j*k];
+//         double C_ij = c[i+j*m];
+//         C_ij = C_ij + A_ip * B_pj;
+//         c[i+j*m] = C_ij;
+//       }
+//     }
+//   }
+// }
+
+
+
+
+// void MMult1(long m, long n, long k, double *a, double *b, double *c) {
+// 	//only blocking
+//     for ( int j_b=0; j_b<m; j_b+=BLOCK_SIZE ){
+//         for ( int p_b=0; p_b<k; p_b+=BLOCK_SIZE ){
+//             for ( int i_b=0; i_b<n; i_b+=BLOCK_SIZE ){
+//             	//inside a block
+//                 for ( int j=j_b; j<j_b+BLOCK_SIZE; j++ ){
+//                     for ( int p=p_b; p<p_b+BLOCK_SIZE; p++ ){
+//                         for ( int i=i_b; i<i_b+BLOCK_SIZE; i++ ){
+//                             double A_ip = a[i+p*m];
+// 					        double B_pj = b[p+j*k];
+// 					        double C_ij = c[i+j*m];
+// 					        C_ij = C_ij + A_ip * B_pj;
+// 					        c[i+j*m] = C_ij;
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
+
+
+
 void MMult1(long m, long n, long k, double *a, double *b, double *c) {
-//  OpenMP
-	long j, p, i;
-	#pragma omp for
-    for (j = 0; j < n; j++){
-        for (p = 0; p < k; p++){
-            for (i = 0; i < m; i++){
-                double A_ip = a[i+p*m];
-                double B_pj = b[p+j*k];
-	            double C_ij = c[i+j*m];
-                C_ij = C_ij + A_ip * B_pj;
-                c[i+j*m] = C_ij;
-            }
-        }
-    }
-}
-
-
-
-/*
-void MMult1(long m, long n, long k, double *a, double *b, double *c) {
-	//only blocking
+	#pragma omp parallel for
     for ( int j_b=0; j_b<m; j_b+=BLOCK_SIZE ){
         for ( int p_b=0; p_b<k; p_b+=BLOCK_SIZE ){
             for ( int i_b=0; i_b<n; i_b+=BLOCK_SIZE ){
@@ -66,36 +90,12 @@ void MMult1(long m, long n, long k, double *a, double *b, double *c) {
         }
     }
 }
-*/
 
-/*
-void MMult1(long m, long n, long k, double *a, double *b, double *c) {
-	#pragma omp parallel for 
-    for ( int j_b=0; j_b<m; j_b+=BLOCK_SIZE ){
-        for ( int p_b=0; p_b<k; p_b+=BLOCK_SIZE ){
-            for ( int i_b=0; i_b<n; i_b+=BLOCK_SIZE ){
-            	//inside a block
-                for ( int j=j_b; j<j_b+BLOCK_SIZE; j++ ){
-                    for ( int p=p_b; p<p_b+BLOCK_SIZE; p++ ){
-                        for ( int i=i_b; i<i_b+BLOCK_SIZE; i++ ){
-                            double A_ip = a[i+p*m];
-					        double B_pj = b[p+j*k];
-					        double C_ij = c[i+j*m];
-					        C_ij = C_ij + A_ip * B_pj;
-					        c[i+j*m] = C_ij;
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-*/
 int main(int argc, char** argv) {
+  // const long PFIRST = BLOCK_SIZE;
   const long PFIRST = BLOCK_SIZE;
-  const long PLAST = 2000;
+  const long PLAST = 2500;
   const long PINC = std::max(50/BLOCK_SIZE,1) * BLOCK_SIZE; // multiple of BLOCK_SIZE
-
   printf(" Dimension       Time    Gflop/s       GB/s        Error\n");
   for (long p = PFIRST; p < PLAST; p += PINC) {
     long m = p, n = p, k = p;
@@ -131,6 +131,7 @@ int main(int argc, char** argv) {
     aligned_free(a);
     aligned_free(b);
     aligned_free(c);
+    aligned_free(c_ref);
   }
 
   return 0;
