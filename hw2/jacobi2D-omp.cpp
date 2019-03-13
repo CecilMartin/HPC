@@ -1,2 +1,104 @@
 //Zhe Chen
-//TODO tommorrow
+#include <iostream>
+#include <cmath>
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
+
+#include "utils.h"
+
+using namespace std;
+
+double Residual(int N, double *U, double *F){
+	double h=1.0/(N+1.0);
+	double res=0.0, res_1=0.0;
+	#pragma omp parallel for shared(U,F)\
+	reduction(+:res)
+	for (int j=1;j<=N;j++){
+		for (int i=1;i<=N;i++){
+			res_1=(-U[(N+2)*j+i-1]-U[(N+2)*(j-1)+i]-U[(N+2)*j+i+1]-U[(N+2)*(j+1)+i]+4.0*U[(N+2)*j+i])/h/h-F[(N+2)*j+i];
+			res+=res_1*res_1;
+		}
+	}
+	res=sqrt(res);
+	return res;
+}
+
+
+
+void Jacobi(int N, double *U, double *F, int maxit){
+    double h = 1.0/(N+1.0);
+    double res=0.0;
+    double tol=1e-8;
+    double rel_res=0.0;
+    int iter=0;
+    double *U_new=(double*) malloc((N+2)*(N+2) * sizeof(double));
+    double res0=Residual(N,U,F);
+    cout << "Initail residual is " << res0 << endl;
+    rel_res=tol+1.0;
+    while (rel_res>tol){
+    	#pragma omp parallel shared(U_new, U)
+			{
+		    #pragma omp for
+	        for (int j = 1; j <= N; j++) {
+	            for (int i = 1; i <= N; i++) {
+	            	//rows first, in the inner loop since it's stored in row order.
+	                U_new[(N+2)*j+i] = 0.25 *
+	                          (h * h * F[(N+2)*j+i] + U[(N+2)*j+i-1] + U[(N+2)*(j-1)+i]
+	                          	+ U[(N+2)*j+i+1]+ U[(N+2)*(j+1)+i]);
+	            }
+	        }
+		    #pragma omp for
+		    for (int j=1; j<=N; j++){
+		    	for (int i=1; i<=N; i++){
+		    		U[(N+2)*j+i]=U_new[(N+2)*j+i];
+		    	}
+		    }
+		}
+		res=Residual(N,U,F);
+		
+		rel_res=res/res0;
+		if (iter%100==0){
+			std::cout << "Relative residual is " << rel_res << std::endl;
+		}
+		iter++;
+		if (iter>maxit){
+			cout << "Max iteration reached: " << maxit <<endl;
+			break;
+		}
+    }
+    free(U_new);
+}
+
+
+
+
+
+
+
+
+
+
+int main(int argc, char **argv) {
+
+    cout << "Please input N(default=10): " << endl;
+    int N = 10;
+    cin >> N;
+    int maxit=10000;
+    //allocate
+    double *U = (double*) malloc ((N+2)*(N+2)*sizeof(double));
+    double *F = (double*) malloc ((N+2)*(N+2)*sizeof(double));
+    //initialize
+    #pragma omp for
+    for (int i=0; i<(N+2)*(N+2); i++){
+    	U[i]=0.0;
+    	F[i]=1.0;
+    }
+    Timer t;
+    t.tic();
+    Jacobi(N, U, F, maxit);
+    cout << "Elapse time=" << t.toc() << "s" <<endl;
+    free(U);
+    free(F);
+    return 0;
+}
