@@ -16,11 +16,17 @@
 
 
 // coefficients in the Taylor series expansion of sin(x)
+static constexpr double c2  = -1/(((double)2));
 static constexpr double c3  = -1/(((double)2)*3);
+static constexpr double c4  =  1/(((double)2)*3*4);
 static constexpr double c5  =  1/(((double)2)*3*4*5);
+static constexpr double c6  = -1/(((double)2)*3*4*5*6);
 static constexpr double c7  = -1/(((double)2)*3*4*5*6*7);
+static constexpr double c8  =  1/(((double)2)*3*4*5*6*7*8);
 static constexpr double c9  =  1/(((double)2)*3*4*5*6*7*8*9);
+static constexpr double c10  = -1/(((double)2)*3*4*5*6*7*8*9*10);
 static constexpr double c11 = -1/(((double)2)*3*4*5*6*7*8*9*10*11);
+static constexpr double c12 = 1/(((double)2)*3*4*5*6*7*8*9*10*11*12);
 // sin(x) = x + c3*x^3 + c5*x^5 + c7*x^7 + x9*x^9 + c11*x^11
 
 void sin4_reference(double* sinx, const double* x) {
@@ -44,6 +50,53 @@ void sin4_taylor(double* sinx, const double* x) {
     s += x9  * c9;
     s += x11 * c11;
     sinx[i] = s;
+  }
+}
+
+void sin4_taylor_extend(double* sinx, const double* x) {
+  int flag[4];
+  for (int i = 0; i < 4; i++) {
+    double x1  = x[i];
+    flag[i] = 1;
+    x1 = x1 - 2.0 * M_PI * floor((x1 + M_PI/4.0)/(2.0*M_PI));
+    if (x1 >= M_PI*3/4) {
+      x1 = x1 - M_PI;
+      flag[i] = -1;
+    }
+    if (x1 >= M_PI/4) {
+      x1 = x1 - M_PI/2;
+      double x2  = x1 * x1;
+      double x4  = x2 * x2;
+      double x6  = x4 * x2;
+      double x8  = x6 * x2;
+      double x10  = x8 * x2;
+      double x12 = x10 * x2;
+
+      double s = 1.0;
+      s += x2  * c2;
+      s += x4  * c4;
+      s += x6  * c6;
+      s += x8  * c8;
+      s += x10 * c10;
+      s += x12 * c12;
+      sinx[i] = flag[i] * s;
+    } else {
+      double x2  = x1 * x1;
+      double x3  = x1 * x2;
+      double x5  = x3 * x2;
+      double x7  = x5 * x2;
+      double x9  = x7 * x2;
+      double x11 = x9 * x2;
+
+      double s = x1;
+      s += x3  * c3;
+      s += x5  * c5;
+      s += x7  * c7;
+      s += x9  * c9;
+      s += x11 * c11;
+      sinx[i] = flag[i] * s;
+    }
+
   }
 }
 
@@ -79,13 +132,21 @@ void sin4_intrin(double* sinx, const double* x) {
 void sin4_vector(double* sinx, const double* x) {
   // The Vec class is defined in the file intrin-wrapper.h
   typedef Vec<double,4> Vec4;
-  Vec4 x1, x2, x3;
+  Vec4 x1, x2, x3, x5, x7, x9, x11;
   x1  = Vec4::LoadAligned(x);
   x2  = x1 * x1;
   x3  = x1 * x2;
+  x5  = x3 * x2;
+  x7  = x5 * x2;
+  x9  = x7 * x2;
+  x11 = x9 * x2;
 
   Vec4 s = x1;
   s += x3  * c3 ;
+  s += x5  * c5 ;
+  s += x7  * c7 ;
+  s += x9  * c9 ;
+  s += x11  * c11 ;
   s.StoreAligned(sinx);
 }
 
@@ -99,14 +160,20 @@ int main() {
   Timer tt;
   long N = 1000000;
   double* x = (double*) aligned_malloc(N*sizeof(double));
+  double* x_ext = (double*) aligned_malloc(N*sizeof(double));
   double* sinx_ref = (double*) aligned_malloc(N*sizeof(double));
+  double* sinx_ref_ext = (double*) aligned_malloc(N*sizeof(double));
   double* sinx_taylor = (double*) aligned_malloc(N*sizeof(double));
+  double* sinx_taylor_ext = (double*) aligned_malloc(N*sizeof(double));
   double* sinx_intrin = (double*) aligned_malloc(N*sizeof(double));
   double* sinx_vector = (double*) aligned_malloc(N*sizeof(double));
   for (long i = 0; i < N; i++) {
     x[i] = (drand48()-0.5) * M_PI/2; // [-pi/4,pi/4]
+    x_ext[i] = (drand48()) * M_PI; // [0,pi]
     sinx_ref[i] = 0;
+    sinx_ref_ext[i] = 0;
     sinx_taylor[i] = 0;
+    sinx_taylor_ext[i] = 0;
     sinx_intrin[i] = 0;
     sinx_vector[i] = 0;
   }
@@ -122,10 +189,26 @@ int main() {
   tt.tic();
   for (long rep = 0; rep < 1000; rep++) {
     for (long i = 0; i < N; i+=4) {
+      sin4_reference(sinx_ref_ext+i, x_ext+i);
+    }
+  }
+  printf("Reference time (extended range): %6.4f\n", tt.toc());
+
+  tt.tic();
+  for (long rep = 0; rep < 1000; rep++) {
+    for (long i = 0; i < N; i+=4) {
       sin4_taylor(sinx_taylor+i, x+i);
     }
   }
   printf("Taylor time:    %6.4f      Error: %e\n", tt.toc(), err(sinx_ref, sinx_taylor, N));
+
+  tt.tic();
+  for (long rep = 0; rep < 1000; rep++) {
+    for (long i = 0; i < N; i+=4) {
+      sin4_taylor_extend(sinx_taylor_ext+i, x_ext+i);
+    }
+  }
+  printf("Taylor time (extended range):    %6.4f      Error: %e\n", tt.toc(), err(sinx_ref_ext, sinx_taylor_ext, N));
 
   tt.tic();
   for (long rep = 0; rep < 1000; rep++) {
@@ -148,5 +231,7 @@ int main() {
   aligned_free(sinx_taylor);
   aligned_free(sinx_intrin);
   aligned_free(sinx_vector);
+  aligned_free(x_ext);
+  aligned_free(sinx_ref_ext);
+  aligned_free(sinx_taylor_ext);
 }
-
