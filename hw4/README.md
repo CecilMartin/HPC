@@ -4,7 +4,7 @@
 
 Results are obtained by running on CIMS's gpu machines cuda{1-5}.cims.nyu.edu. Configurations of these servers can be found on https://cims.nyu.edu/webapps/content/systems/resources/computeservers.
 
-Modules environment is gcc-4.9.2, cuda-9.3. 
+Modules environment is gcc-4.9.2, cuda-9.3.
 
 ####Notice that one must use cuda 9 or higher verision to support \_\_syncwarp in P1.
 
@@ -30,7 +30,7 @@ Here we implemented matrix-vector product in matrix\_vector.cu.
 
 Consider a M-by-N matrix multiplied by a N-by-1 vector. Generally, it's the same trick as vector innner product. We regard it as M inner products of each row of matrix and the N-by-1 vector. Blocking and shared memory are also used here in each innner product. BLOCK\_SIZE=1024 and M=N=2^12 since we want to make M*N the same as N=2^24 in problem a to make this comparison meaningful.
 
-Bandwidth of gpu cuda code dramatically decreases here because we don't paralel the each row's inner-product. 
+Bandwidth of gpu cuda code dramatically decreases here because we don't paralel the each row's inner-product.
 
 |         cuda        |     1     |     2     |     3     |
 |:-------------------:|:---------:|:---------:|:---------:|
@@ -41,7 +41,7 @@ Bandwidth of gpu cuda code dramatically decreases here because we don't paralel 
 
 ### a. 2D Jacobi
 
-2D Jacobi method is paralleled on GPUs in jacobi\_cuda.cu. It's compared with cpu parallel codes we wrote before using omp. 
+2D Jacobi method is paralleled on GPUs in jacobi\_cuda.cu. It's compared with cpu parallel codes we wrote before using omp.
 
 We use the same trick as figure filtering which is discussed on class. A matrix of (N+2)-by-(N+2) is to store the solution and we update the matrix with Jacobo method at each time. Here we also use blocking method and shared memory. On each  block, there's BLOCK\_SIZE=32 big matrix, which is shared within a block, and we update the innner (BLOCK\_SIZE-2) big matrix. It's similar as we use a 3-by-3 kernel to filter a matrix at each step.
 
@@ -62,5 +62,3 @@ As the same, we set  BLOCK\_SIZE=32, N=128. It's set to run until maxium iterati
 |:-------------------:|:---------:|:--------:|:---------:|
 | cpu bandwidth(GB/s) | 10.532527 | 5.399020 | 10.986437 |
 | gpu bandwidth(GB/s) |  7.888837 | 4.661180 |  3.587161 |
-
-
