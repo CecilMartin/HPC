@@ -217,11 +217,13 @@ int main(int argc, char **argv) {
   Timer t;
   t.tic();
   gs2D_cpu(N, U, F, maxit,num_threads);
+  printf("CPU Bandwidth = %f GB/s\n", maxit*10*(N+2)*(N+2)*sizeof(double) / (t.toc())/1e9);
   cout << "CPU Elapse time=" << t.toc() << "s" <<endl;
 
   memset(U,0,(N+2)*(N+2)*sizeof(double));
   t.tic();
   gs2D_gpu(N, U, F, maxit);
+  printf("GPU Bandwidth = %f GB/s\n", maxit*10*(N+2)*(N+2)*sizeof(double) / (t.toc())/1e9);
   cout << "GPU Elapse time=" << t.toc() << "s" <<endl;
 
   free(U);
