@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
 	cout << "Please input num of threads(default=1): " << endl;
 	int num_threads = 1;
 	cin >> num_threads;
-	int maxit=10000;
+  int maxit=10000;
 	//allocate
 	double *U = (double*) malloc ((N+2)*(N+2)*sizeof(double));
 	double *F = (double*) malloc ((N+2)*(N+2)*sizeof(double));

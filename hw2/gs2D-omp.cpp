@@ -88,15 +88,9 @@ void Gaiss_Seidel_Black_Red(int N, double *U, double *F, int maxit, int num_thre
 		res=Residual(N,U,F);
 
 		rel_res=res/res0;
-<<<<<<< HEAD
 		// if (iter%(maxit/10)==0){
 		// 	std::cout << "Relative residual is " << rel_res << std::endl;
 		// }
-=======
-		if (iter%(maxit/10)==0){
-			std::cout << "Relative residual is " << rel_res << std::endl;
-		}
->>>>>>> b776b120b89bd242604293bf2c55d16ed9b61627
 		iter++;
 		if (iter>maxit){
 			cout << "Max iteration reached: " << maxit <<endl;
