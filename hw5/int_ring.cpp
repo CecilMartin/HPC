@@ -8,31 +8,35 @@ double time_ring_comm(long Nrepeat, long Nsize, MPI_Comm comm) {
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
   if (size!=2) printf("Error! Use 2 procs\n");
-  char* msg = (char*) malloc(Nsize);
+  int* msg = (int*) malloc(Nsize*sizeof(int));
   for (long i = 0; i < Nsize; i++) msg[i] = 0;
   MPI_Barrier(comm);
   double tt = MPI_Wtime();
   int proc0 = 0, proc1 = 1;
+  printf("I'm proc %i\n",rank);
   for (long repeat  = 0; repeat < Nrepeat; repeat++) {
+    //if (!rank) printf("repeat=%i\n",repeat);
     MPI_Status status;
     if (repeat % 2 == 0) { // even iterations
 
       if (rank == proc0){
         msg[0] += rank;
-        MPI_Send(msg, Nsize, MPI_CHAR, proc1, repeat, comm);
+        MPI_Send(msg, Nsize, MPI_INT, proc1, repeat, comm);
       }
       else if (rank == proc1){
-        MPI_Recv(msg, Nsize, MPI_CHAR, proc0, repeat, comm, &status);
+        MPI_Recv(msg, Nsize, MPI_INT, proc0, repeat, comm, &status);
+        //printf("Message %i received by proc %i in repeat %i\n",msg[0],rank,repeat );
       }
     }
     else { // odd iterations
 
       if (rank == proc0){
-        MPI_Recv(msg, Nsize, MPI_CHAR, proc0, repeat, comm, &status);
+        MPI_Recv(msg, Nsize, MPI_INT, proc1, repeat, comm, &status);
+        //printf("Message %i received by proc %i in repeat %i\n",msg[0],rank,repeat );
       }
       else if (rank == proc1){
         msg[0] += rank;
-        MPI_Send(msg, Nsize, MPI_CHAR, proc1, repeat, comm);
+        MPI_Send(msg, Nsize, MPI_INT, proc0, repeat, comm);
       }
     }
   }
@@ -68,11 +72,14 @@ int main(int argc, char** argv) {
 
   double tt = time_ring_comm(Nrepeat, 1, comm);
   if (!rank) printf("pingpong latency: %e ms\n", tt/Nrepeat * 1000);
-
-  Nrepeat = 1000;
-  long Nsize = 2 * 1e6 ;
+  MPI_Barrier(comm);
+  if (!rank) printf("------------------------------------------------------------------------------\n");
+  //ENrepeat = 1000;
+  long Nsize = 2e6 / sizeof(int) ;
   tt = time_ring_comm(Nrepeat, Nsize, comm);
-  if (!rank) printf("pingpong bandwidth: %e GB/s\n", (Nsize*Nrepeat)/tt/1e9);
+  MPI_Barrier(comm);
+  if (!rank) printf("------------------------------------------------------------------------------\n");
+  if (!rank) printf("pingpong bandwidth: %e GB/s\n", (Nsize*sizeof(int)*Nrepeat)/tt/1e9);
 
   MPI_Finalize();
 }
